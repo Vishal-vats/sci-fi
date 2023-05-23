@@ -1,6 +1,4 @@
 using System.Collections;
-using System.Collections.Generic;
-using UnityEditor.Experimental.GraphView;
 using UnityEngine;
 using UnityEngine.AI;
 
@@ -10,6 +8,9 @@ public class Player : MonoBehaviour
     private NavMeshAgent _agent;
     private AudioSource _audiosource;
     private UImanager _uiManager;
+
+    [SerializeField]
+    private Animator _animator;
 
     [SerializeField]
     private GameObject _muzzelFlash;
@@ -40,10 +41,12 @@ public class Player : MonoBehaviour
     private int _maxAmmoCapacity = 240;
     private int _tempMaxAmmoCapacity;
 
-    public bool _isCoinCollected = false;
     private float _fireRate = 0.1f;
     private float _canfire;
+    public bool _isCoinCollected = false;
     private bool _isReloading = false;
+
+    public bool _isWeaponCollected = false;
 
     /*
     one way to create reloading is below
@@ -64,7 +67,7 @@ public class Player : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        if (Input.GetMouseButton(0) && _currentAmmo > 0 && _isReloading == false)
+        if (Input.GetMouseButton(0) && _currentAmmo > 0 && _isReloading == false && _isWeaponCollected == true)
         {
             //apply FireRate system
             if (Time.time > _canfire)
@@ -86,6 +89,7 @@ public class Player : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.R) && (_currentAmmo == 0 || _currentAmmo < 30) && _maxAmmoCapacity > 0)
         {
             _isReloading = true;
+            _audiosource.PlayOneShot(_reloadingSound, 1f); // it is not Working. However it works while in debug mode.
             AudioSource.PlayClipAtPoint(_reloadingSound, Camera.main.transform.position, 1f);
             StartCoroutine(ShootingReloading());
         }
@@ -107,7 +111,7 @@ public class Player : MonoBehaviour
         {
             _tempMaxAmmoCapacity = _maxAmmoCapacity; //for storing maxAmmoCpacity value temprary.
         }
-
+        _animator.SetTrigger("Reloading"); // play Reload Animation Clip
         yield return new WaitForSeconds(2f);
         ReloadingLogic();
         _isReloading = false;
@@ -177,12 +181,23 @@ public class Player : MonoBehaviour
             Debug.Log("We Hit: " + hitInfo.transform.name);
             GameObject _hit = Instantiate(_hitMarkerEffect, hitInfo.point, Quaternion.LookRotation(hitInfo.normal)) as GameObject;
             Destroy(_hit, 1.5f);
+
+            if(hitInfo.transform.tag == "Crate")
+            {
+                Destructible crate = hitInfo.transform.GetComponent<Destructible>();
+                if (crate != null)
+                {
+                    crate.destroyCrate();
+                }
+            }
         }
     }
 
+
     public void enableWeapon()
     {
-        _weapon.SetActive(true); 
+        _weapon.SetActive(true);
+        _isWeaponCollected = true;
     }
 
 
